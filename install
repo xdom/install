@@ -275,7 +275,7 @@ if File.directory? HOMEBREW_PREFIX
   sudo "/usr/bin/chgrp", "staff", *chgrps unless chgrps.empty?
 else
   sudo "/bin/mkdir", "-p", HOMEBREW_PREFIX
-  sudo "/usr/sbin/chown", "#{ENV["USER"}:staff", HOMEBREW_PREFIX
+  sudo "/usr/sbin/chown", "#{ENV["USER"]}:staff", HOMEBREW_PREFIX
 end
 
 unless mkdirs.empty?
