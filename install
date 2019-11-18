@@ -70,10 +70,14 @@ def system(*args)
 end
 
 def sudo(*args)
-  args.unshift("-A") unless ENV["SUDO_ASKPASS"].nil?
-  sudo_cmd = DISABLE_SUDO ? "" : "usr/bin/sudo"
-  ohai sudo_cmd, *args
-  system sudo_cmd, *args
+  if DISABLE_SUDO
+    ohai *args
+    system *args
+  else
+    args.unshift("-A") unless ENV["SUDO_ASKPASS"].nil?
+    ohai "/usr/bin/sudo", *args
+    system "/usr/bin/sudo", *args
+  end
 end
 
 def getc
