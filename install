@@ -2,10 +2,12 @@
 # This script installs to /usr/local only. To install elsewhere (which is
 # unsupported) you can untar https://github.com/Homebrew/brew/tarball/master
 # anywhere you like.
-HOMEBREW_PREFIX = "/usr/local".freeze
-HOMEBREW_REPOSITORY = "/usr/local/Homebrew".freeze
+HOMEBREW_PREFIX = "#{ENV["HOME"]}/.brew".freeze
+HOMEBREW_REPOSITORY = "#{HOMEBREW_PREFIX}/Homebrew".freeze
 HOMEBREW_CACHE = "#{ENV["HOME"]}/Library/Caches/Homebrew".freeze
 BREW_REPO = "https://github.com/Homebrew/brew".freeze
+
+DISABLE_SUDO = true
 
 # TODO: bump version when new macOS is released
 MACOS_LATEST_SUPPORTED = "10.15".freeze
@@ -69,8 +71,9 @@ end
 
 def sudo(*args)
   args.unshift("-A") unless ENV["SUDO_ASKPASS"].nil?
-  ohai "/usr/bin/sudo", *args
-  system "/usr/bin/sudo", *args
+  sudo_cmd = DISABLE_SUDO ? "" : "usr/bin/sudo"
+  ohai sudo_cmd, *args
+  system sudo_cmd, *args
 end
 
 def getc
@@ -129,7 +132,7 @@ def user_only_chmod?(path)
   # u = (mode >> 6) & 07
   # g = (mode >> 3) & 07
   # o = (mode >> 0) & 07
-  mode != 0755
+  mode != 0700
 end
 
 def chmod?(path)
@@ -148,7 +151,7 @@ end
 ENV["USER"] ||= `id -un`.chomp
 
 # Invalidate sudo timestamp before exiting (if it wasn't active before).
-Kernel.system "/usr/bin/sudo -n -v 2>/dev/null"
+Kernel.system "/usr/bin/sudo -n -v 2>/dev/null" unless DISABLE_SUDO
 at_exit { Kernel.system "/usr/bin/sudo", "-k" } unless $CHILD_STATUS.success?
 
 # The block form of Dir.chdir fails later if Dir.CWD doesn't exist which I
@@ -267,26 +270,26 @@ wait_for_user if STDIN.tty? && !ENV["CI"]
 if File.directory? HOMEBREW_PREFIX
   sudo "/bin/chmod", "u+rwx", *chmods unless chmods.empty?
   sudo "/bin/chmod", "g+rwx", *group_chmods unless group_chmods.empty?
-  sudo "/bin/chmod", "755", *user_chmods unless user_chmods.empty?
+  sudo "/bin/chmod", "700", *user_chmods unless user_chmods.empty?
   sudo "/usr/sbin/chown", ENV["USER"], *chowns unless chowns.empty?
-  sudo "/usr/bin/chgrp", "admin", *chgrps unless chgrps.empty?
+  sudo "/usr/bin/chgrp", "staff", *chgrps unless chgrps.empty?
 else
   sudo "/bin/mkdir", "-p", HOMEBREW_PREFIX
-  sudo "/usr/sbin/chown", "root:wheel", HOMEBREW_PREFIX
+  sudo "/usr/sbin/chown", "#{ENV["USER"}:staff", HOMEBREW_PREFIX
 end
 
 unless mkdirs.empty?
   sudo "/bin/mkdir", "-p", *mkdirs
   sudo "/bin/chmod", "g+rwx", *mkdirs
-  sudo "/bin/chmod", "755", *zsh_dirs
+  sudo "/bin/chmod", "700", *zsh_dirs
   sudo "/usr/sbin/chown", ENV["USER"], *mkdirs
-  sudo "/usr/bin/chgrp", "admin", *mkdirs
+  sudo "/usr/bin/chgrp", "staff", *mkdirs
 end
 
 sudo "/bin/mkdir", "-p", HOMEBREW_CACHE unless File.directory? HOMEBREW_CACHE
 sudo "/bin/chmod", "g+rwx", HOMEBREW_CACHE if chmod? HOMEBREW_CACHE
 sudo "/usr/sbin/chown", ENV["USER"], HOMEBREW_CACHE if chown? HOMEBREW_CACHE
-sudo "/usr/bin/chgrp", "admin", HOMEBREW_CACHE if chgrp? HOMEBREW_CACHE
+sudo "/usr/bin/chgrp", "staff", HOMEBREW_CACHE if chgrp? HOMEBREW_CACHE
 system "/usr/bin/touch", "#{HOMEBREW_CACHE}/.cleaned" if File.directory? HOMEBREW_CACHE
 
 if should_install_command_line_tools? && macos_version >= "10.13"
